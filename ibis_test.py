@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 from scipy.io import readsav
 from astropy.io import fits
 from ibis_core_m import ibis_core_m  # Importa la funzione dal tuo file
@@ -55,7 +56,7 @@ with fits.open('6173_aps.fits') as hdul:
 # I dati siano in variabili chiamate 'flat' e 'dark'
 f_file = flat_data['flat']  
 d_file = dark_data['dark']
-info_str = flat_data['info_flat_nb']
+info_str = flat_data['info_flat_nb'] 
 
 # ***************************************************************
 # Ottieni le dimensioni
@@ -63,7 +64,7 @@ info_str = flat_data['info_flat_nb']
 print("Forma di f_file:", f_file.shape)
 print("Forma di d_file:", d_file.shape)
 
-Nx, Ny = f_file.shape[1], f_file.shape[2]
+Ny, Nx = f_file.shape[1], f_file.shape[2]
 Npol = 6
 Nwave = int(f_file.shape[0] / Npol)
 
@@ -83,7 +84,7 @@ index = np.arange(Nwave)
 ftmp = np.copy(f_file)
 
 for i in range(Nwave):
-    ftmp[:, :, i*Npol:(i+1)*Npol] = f_file[:, :, index[i]*Npol:(index[i]+1)*Npol]
+    ftmp[i*Npol:(i+1)*Npol, :, :] = f_file[index[i]*Npol:(index[i]+1)*Npol, :, :]
 
 f_file = ftmp
 del ftmp  # Libera memoria
@@ -101,35 +102,34 @@ if pol == 1:
     print("Forma di dark:", dark.shape)  # Deve essere (1000, 1000)
 
     #temp=np.zeros((Nx,Ny), dtype=np.float32)
-    temp = np.zeros((Nx,Ny), dtype=np.float32)
-    flat_tmp = np.zeros((Nx, Ny, Nwave, Npol), dtype=np.float32)
+    temp = np.zeros((Ny,Nx), dtype=np.float32)
+    flat_tmp = np.zeros((Npol, Nwave, Ny, Nx), dtype=np.float32)
     
     # Ciclo corretto per calcolare il blueshift
     
-    for n in range(Nwave):
-        for i in range(Npol):
+    for i in range(Npol):
+        for n in range(Nwave):
             temp = f_file[n*Npol+i, :, :] - dark[i, :]  # Corretto indexing
-            flat_tmp[:, :, n, i] = temp
+            flat_tmp[i, n, :, :] = temp
 
-    # Verifica le dimensioni di flat_tmp
-    print("Forma di flat_tmp:", flat_tmp.shape)
-    
     # Visualizzazione della parte dell'immagine
     plt.figure(figsize=(7, 4))
-    plt.plot(flat_tmp[250, 500, :, 0], marker='o', markersize=0.5, label="Posizione (250,500)")  #[250, 500, :, 0]
-    plt.plot(flat_tmp[250, 125, :, 0], marker='x', markersize=0.5, label="Posizione (250,125)")  #[250, 125, :, 0]
-    plt.plot(flat_tmp[250, 900, :, 0], marker='s', markersize=0.5, label="Posizione (250,900)")  #[250, 900, :, 0]
+    plt.plot(flat_tmp[0,:,500, 250], marker='o', markersize=0.5, label="Posizione (250,500)")  #[250, 500, :, 0]
+    plt.plot(flat_tmp[0,:, 125, 250], marker='x', markersize=0.5, label="Posizione (250,125)")  #[250, 125, :, 0]
+    plt.plot(flat_tmp[0,:,900, 250], marker='s', markersize=0.5, label="Posizione (250,900)")  #[250, 900, :, 0]
     plt.legend(fontsize=6)
-    plt.show()
+    plt.show(block=False)
+    plt.pause(3)
+    plt.close()
 
      # Define the wavelength range
     print('Nwave=',Nwave)
     wrange = [2, Nwave - 1]
-    print(wrange)
+    print(wrange,wrange[0],wrange[1])
 # #***************************************************************
 # #Calcolo dell'offset con ibis_core_m
 # #***************************************************************
-    offset = ibis_core_m(flat_tmp[:, :, wrange[0]:wrange[1], :], wrange, npoints, aps, info_str=info_str, POL=pol, DUAL=dual, SINGLE=single, stokes=stokes)
+    offset = ibis_core_m(flat_tmp[:, wrange[0]:wrange[1], :, :], wrange, aps, info_str=info_str, stokes=stokes)
 
     print("Offset calcolato correttamente.")
 
