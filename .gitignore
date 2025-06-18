@@ -1,1 +1,3 @@
-Dayshift/data/
+Dayshift/data/calib/atlas/*.fits
+Dayshift/data/calib/prefilter/*.sav
+Dayshift/data/fits/*.fits
