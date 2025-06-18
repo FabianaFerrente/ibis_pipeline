@@ -1,0 +1,5 @@
+--- Risultati Analisi Dayshift per Filtro 6173 ---
+Shift calcolato (da fit gaussiano su scala relativa): 0.2302 Å
+Lunghezza d'onda corrispondente al punto di riferimento (zero voltage, calcolato): 6172.1929 Å
+Range in lunghezza d'onda assoluta stimata: 6170.2094 Å – 6174.1764 Å
+-----------------------------------------------------------

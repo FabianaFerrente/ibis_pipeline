@@ -1,0 +1,5 @@
+--- Dayshift Analysis Results for Filter 8542 ---
+Calculated shift (from Gaussian fit on relative scale): -0.2739 Å
+Wavelength corresponding to the reference point (zero voltage, calculated): 8542.2489 Å
+Estimated absolute wavelength range: 8539.2614 Å – 8545.2364 Å
+-----------------------------------------------------------

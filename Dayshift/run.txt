@@ -1,0 +1,6 @@
+conda create -n ibis_env python=3.9 numpy matplotlib astropy scipy pandas
+conda activate ibis_env
+
+
+python dayshift.py --filter 8542 --show-plots
+python dayshift.py --filter 8542 
