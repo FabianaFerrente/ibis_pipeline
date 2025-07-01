@@ -22,7 +22,21 @@ def lpff_pol(arr):
     fl1 = np.fft.fft(arr)
 
     # Calcolo della fase e posizione
-    lp = -np.arctan2(fl1[1].imag, fl1[1].real) / tpi * 360.0
+    #lp = -np.arctan2(fl1[1].imag, fl1[1].real) / tpi * 360.0
+    
+    # Please verify if the line below does the same thing as the line above
+    
+    lp = -np.arctan2(fl1[1].imag, fl1[1].real, dtype=float) * 180.0 / np.pi
+    
     pos = lp / dp + mid
+
+    """
+    # Please also verify if this line yields the same results as the code above.
+    
+    pos = (1.0-np.arctan2(fl1[1].imag, fl1[1].real, dtype=float)/np.pi)*(len(arr)/2.0)
+    
+    # If yes, I prefer to use this line in the final code, given that this code is called too many times, and using a one-liner is better for performance gains here.
+    # I would still keep the rest of the code, comment it out, for explaining purposes
+    """
 
     return pos
