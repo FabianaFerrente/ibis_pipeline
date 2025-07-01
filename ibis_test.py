@@ -127,7 +127,7 @@ if pol == 1:
 
      # Define the wavelength range
     print('Nwave=',Nwave)
-    wrange = [2, Nwave - 1]
+    wrange = [1, Nwave]
     print(wrange,wrange[0],wrange[1])
 # #***************************************************************
 # #Calcolo dell'offset con ibis_core_m
