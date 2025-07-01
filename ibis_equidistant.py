@@ -47,6 +47,6 @@ def ibis_equidistant(input_str, Nwave, wrange=None):
     else:
         nwlambda = 0  # O un altro valore sensato
 
-    wlambda_equi = np.linspace(np.min(wlambda), np.max(wlambda), nwlambda)
+    wlambda_equi = np.linspace(np.min(wlambda), np.max(wlambda), nwlambda, dtype=np.float64)
 
     return wlambda,wlambda_equi
