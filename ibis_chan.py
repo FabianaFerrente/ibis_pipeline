@@ -87,7 +87,7 @@ def avgoffset(k, aps1, flat1, wscale1, wscale_equi, npoints, idxx, Nwave):
     return [avgoffs, avgoffs1]
 
 def avgoffsets(k, aps1, flat1, wscale1, wscale_equi, npoints):
-    # This is the function being used in the final calculation
+    # This is the function being used in the final calculation, see the function below
     id = np.where(aps1 >= 1, True, False)
     avgprof = np.mean(flat1[k, :, :, :], axis=(1, 2), where=id, dtype=float)
     pavg = (make_interp_spline(wscale1, avgprof, k=2))(wscale_equi)
