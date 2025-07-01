@@ -43,19 +43,22 @@ print("points:",npoints)
 # *****************************************************************
 
 # Carica flat e dark e aps
-flat_data = readsav('6173_flat.sav')  
-dark_data = readsav('6173_dark.sav')
+flat_data, dark_data = readsav('6173_flat.sav'), readsav('6173_dark.sav')
 
+"""
 with fits.open('6173_aps.fits') as hdul:
     hdul.info()  # Mostra le estensioni del file
     aps = hdul[0].data  # Legge i dati dell'estensione principale
     aps_h = hdul[0].header  # Legge l'header
     idx = np.where(aps > 1)
-
+"""
+with fits.open('6173_aps.fits') as hdul:
+    hdul.info()  # Mostra le estensioni del file
+    aps, aps_h = hdul[0].data, hdul[0].header
+idx = np.where(aps > 1)
 
 # I dati siano in variabili chiamate 'flat' e 'dark'
-f_file = flat_data['flat']  
-d_file = dark_data['dark']
+f_file, d_file = flat_data['flat'], dark_data['dark']
 info_str = flat_data['info_flat_nb'] 
 
 # ***************************************************************
@@ -64,8 +67,7 @@ info_str = flat_data['info_flat_nb']
 print("Forma di f_file:", f_file.shape)
 print("Forma di d_file:", d_file.shape)
 
-Ny, Nx = f_file.shape[1], f_file.shape[2]
-Npol = 6
+Ny, Nx, Npol = f_file.shape[1], f_file.shape[2], 6
 Nwave = int(f_file.shape[0] / Npol)
 
 print(Nwave)
@@ -74,7 +76,8 @@ print(Nwave)
 # ***************************************************************
 # Creare il "dark" medio, nessuna dipendenza dalla lunghezza d'onda
 # ***************************************************************
-dark = np.mean(d_file, axis=1)
+# dark = np.mean(d_file, axis=1)
+dark = np.mean(d_file, axis=0)
 print("Dim dark:", dark.shape)
 
 # ***************************************************************
@@ -109,7 +112,7 @@ if pol == 1:
     
     for i in range(Npol):
         for n in range(Nwave):
-            temp = f_file[n*Npol+i, :, :] - dark[i, :]  # Corretto indexing
+            temp = f_file[n*Npol+i, :, :] - dark[:, :]  # Corretto indexing
             flat_tmp[i, n, :, :] = temp
 
     # Visualizzazione della parte dell'immagine
