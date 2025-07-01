@@ -67,6 +67,7 @@ def ibis_core_m(flat, wrange, aps, info_str, stokes=1):
     print("Shape of flat:", flat.shape)
     Nwave, Ny, Nx = flat.shape[1:4]
     Npol = stokes if stokes is not None else 1
+    Sep_LR = Nx//2  # separation index between the channels, start index of the second channel
     print("Nwave:", Nwave)
     # ********************
     # 2. Create output structure
@@ -93,11 +94,23 @@ def ibis_core_m(flat, wrange, aps, info_str, stokes=1):
     if dual is not None and dual == 1:
         
         print("Dual-beam mode activated.")
+        flat_l, apsl = flat[:, :, :, :Sep_LR], aps[:, :Sep_LR]
+        flat_r, apsr = flat[:, :, :, Sep_LR:], aps[:, Sep_LR:]
+
+        # Defining arrays to store final results
+        bshift_cog, bshift_poly = np.zeros((Ny, Nx), dtype=float), np.zeros((Ny, Nx), dtype=float)
+        bshift_cog_fit, bshift_poly_fit = np.zeros((Ny, Nx), dtype=float), np.zeros((Ny, Nx), dtype=float)
+
+        # Defining arrays for storing the surface fits
+        bshift_cog_fit_left, bshift_poly_fit_left = np.zeros((Ny, Sep_LR), dtype=float), np.zeros((Ny, Sep_LR), dtype=float)
+        bshift_cog_fit_right, bshift_poly_fit_right = np.zeros((Ny, Sep_LR), dtype=float), np.zeros((Ny, Sep_LR), dtype=float)
         
+        """
         flat_l=flat[:, :, :, :Nx//2]
         apsl = aps[:, 0:Nx//2]
 
         bshift_cog1,bshift_poly1=ibis_chan(apsl,flat_l,wscale1,wscale_equi,Npol,Nwave,Nx,Ny,npoints)
+        # moved down
 
         bshift_cog_l = bshift_cog1
         bshift_poly_l = bshift_poly1
@@ -108,32 +121,47 @@ def ibis_core_m(flat, wrange, aps, info_str, stokes=1):
         bshift_cog1,bshift_poly1=ibis_chan(apsr,flat_r,wscale1,wscale_equi,Npol,Nwave,Nx,Ny,npoints)
 
         bshift_cog_r = bshift_cog1
-        bshift_poly_r = bshift_poly1        
+        bshift_poly_r = bshift_poly1    
+        """
 
+        bshift_cog_l, bshift_poly_l = ibis_chan(apsl, flat_l, wscale1, wscale_equi, Npol, Nwave, Nx, Ny, npoints)
+        bshift_cog_r, bshift_poly_r = ibis_chan(apsr, flat_r, wscale1, wscale_equi, Npol, Nwave, Nx, Ny, npoints)
+        
         
         print(bshift_cog_l.shape,bshift_cog_r.shape)
         print(bshift_poly_l.shape,bshift_poly_r.shape)
+        """
         # Assemblaggio dei risultati
         bshift_cog = np.zeros((Ny, Nx), dtype=float)
         bshift_poly = np.zeros((Ny, Nx), dtype=float)
-
+        # moved up after defining flat_l
+        """
         print(bshift_cog.shape,bshift_poly.shape)
 
+        """
         bshift_cog[:, 0:Nx//2] = bshift_cog_l
         bshift_poly[:, 0:Nx//2] = bshift_poly_l
         bshift_cog[:, Nx//2:Nx] = bshift_cog_r
         bshift_poly[:, Nx//2:Nx] = bshift_poly_r
+        """
+        bshift_cog[:, :Sep_LR], bshift_poly[:, :Sep_LR] = bshift_cog_l, bshift_poly_l # left channel
+        bshift_cog[:, Sep_LR:], bshift_poly[:, Sep_LR:] = bshift_cog_r, bshift_poly_r # right channel
+
+        
 
         # Visualizza la mappa 'cog_fit'
+        plt.figure(figsize=(7, 4))
         plt.imshow(bshift_cog, cmap='gray', aspect='auto')
         plt.colorbar()
-        plt.title("(cog_fit)")
+        plt.title("(cog)")
+        # plt.title("(cog_fit)")
         plt.show()
 
         # ********************
         # 6. Surface Fit
         # ********************
 
+        """
         bshift_cog_fit = np.zeros((Ny, Nx))
         bshift_poly_fit = np.zeros((Ny, Nx))
 
@@ -141,29 +169,39 @@ def ibis_core_m(flat, wrange, aps, info_str, stokes=1):
         bshift_poly_fit_left = np.zeros((Ny, Nx//2))
         bshift_cog_fit_right = np.zeros((Ny, Nx//2))
         bshift_poly_fit_right = np.zeros((Ny, Nx//2))
-
+        # moved both up near the start of the if condition.
+        """
 
         # Creazione di matrici x e y
 
         # Coordinate come in IDL con rebin
+        """
         xmatrix = np.tile(np.arange(Nx//2), (Ny, 1))
         ymatrix = np.tile(np.arange(Ny).reshape(Ny, 1), (1, Nx//2))
-
+        
         zmatrix_cog = bshift_cog_l
         zmatrix_poly = bshift_poly_l
-
+        """
+        xmatrix, ymatrix = np.tile(np.arange(Sep_LR), (Ny, 1)), np.tile(np.arange(Ny).reshape(Ny, 1), (1, Sep_LR))
+        zmatrix_cog, zmatrix_poly = bshift_cog_l, bshift_poly_l
+        
         # Maschera dei punti validi
         mask = zmatrix_cog != zmatrix_cog[10, 10]
+        """
         x_valid = xmatrix[mask].flatten()
         y_valid = ymatrix[mask].flatten()
         z_cog_valid = zmatrix_cog[mask].flatten()
         z_poly_valid = zmatrix_poly[mask].flatten()
-
+        """
+        x_valid, y_valid = xmatrix[mask].flatten(), ymatrix[mask].flatten()
+        z_cog_valid, z_poly_valid = zmatrix_cog[mask].flatten(), zmatrix_poly[mask].flatten()
+        
         # Regressione polinomiale (grado 2)
         X = np.vstack((x_valid, y_valid)).T
         poly = PolynomialFeatures(degree=2)
         X_poly = poly.fit_transform(X)
 
+        """
         # Fit per zmatrix_cog
         model_cog = LinearRegression()
         model_cog.fit(X_poly, z_cog_valid)
@@ -174,6 +212,15 @@ def ibis_core_m(flat, wrange, aps, info_str, stokes=1):
         model_poly.fit(X_poly, z_poly_valid)
         fit_poly = model_poly.predict(X_poly)
 
+        # rearranged below
+        
+        """
+        model_cog, model_poly = LinearRegression(), LinearRegression()
+        model_cog.fit(X_poly, z_cog_valid)
+        model_poly.fit(X_poly, z_poly_valid)
+        fit_cog, fit_poly = model_cog.predict(X_poly), model_poly.predict(X_poly)
+
+
         # Matrici risultato (inizializzate con NaN)
         bshift_cog_fit_left = np.full_like(zmatrix_cog, np.nan, dtype=np.float64)
         bshift_poly_fit_left = np.full_like(zmatrix_poly, np.nan, dtype=np.float64)
@@ -183,26 +230,35 @@ def ibis_core_m(flat, wrange, aps, info_str, stokes=1):
         bshift_poly_fit_left[mask] = fit_poly
     
         
-        # Fit right region
+        # Fit the right region
+        """
         xmatrix = np.tile(np.arange(Nx//2, Nx), (Ny, 1))
         ymatrix = np.tile(np.arange(Ny).reshape(Ny, 1), (1, Nx//2))
-
+        
         # Matrici da interpolare
         zmatrix_cog = bshift_cog_r
         zmatrix_poly = bshift_poly_r
+        """
+        xmatrix, ymatrix = np.tile(np.arange(Sep_LR, Nx), (Ny, 1)), np.tile(np.arange(Ny).reshape(Ny, 1), (1, Sep_LR))
+        zmatrix_cog, zmatrix_poly = bshift_cog_r, bshift_poly_r
 
         # Maschera dei valori validi
         mask = zmatrix_cog != zmatrix_cog[10, 10]
+        """
         x_valid = xmatrix[mask].flatten()
         y_valid = ymatrix[mask].flatten()
         z_cog_valid = zmatrix_cog[mask].flatten()
         z_poly_valid = zmatrix_poly[mask].flatten()
+        """
+        x_valid, y_valid = xmatrix[mask].flatten(), ymatrix[mask].flatten()
+        z_cog_valid, z_poly_valid = zmatrix_cog[mask].flatten(), zmatrix_poly[mask].flatten()
 
         # Fit polinomiale di secondo grado
         X = np.vstack((x_valid, y_valid)).T
         poly = PolynomialFeatures(degree=2)
         X_poly = poly.fit_transform(X)
 
+        """
         # Fit su zmatrix_cog
         model_cog = LinearRegression()
         model_cog.fit(X_poly, z_cog_valid)
@@ -213,6 +269,15 @@ def ibis_core_m(flat, wrange, aps, info_str, stokes=1):
         model_poly.fit(X_poly, z_poly_valid)
         fit_poly = model_poly.predict(X_poly)
 
+        # rearranged below
+        
+        """
+        
+        model_cog, model_poly = LinearRegression(), LinearRegression()
+        model_cog.fit(X_poly, z_cog_valid)
+        model_poly.fit(X_poly, z_poly_valid)
+        fit_cog, fit_poly = model_cog.predict(X_poly), model_poly.predict(X_poly)
+
         # Matrici risultato inizializzate con NaN
         bshift_cog_fit_right = np.full_like(zmatrix_cog, np.nan, dtype=np.float64)
         bshift_poly_fit_right = np.full_like(zmatrix_poly, np.nan, dtype=np.float64)
@@ -222,20 +287,25 @@ def ibis_core_m(flat, wrange, aps, info_str, stokes=1):
         bshift_poly_fit_right[mask] = fit_poly
 
         # Assemblaggio finale
+        """
         bshift_cog_fit[:, :Nx//2] = bshift_cog_fit_left
         bshift_poly_fit[:, :Nx//2] = bshift_poly_fit_left
         bshift_cog_fit[:, Nx//2:] = bshift_cog_fit_right
         bshift_poly_fit[:, Nx//2:] = bshift_poly_fit_right
+        """
+        bshift_cog_fit[:, :Sep_LR], bshift_poly_fit[:, :Sep_LR] = bshift_cog_fit_left, bshift_poly_fit_left
+        bshift_cog_fit[:, Sep_LR:], bshift_poly_fit[:, Sep_LR:] = bshift_cog_fit_right, bshift_poly_fit_right
 
         # Creazione della mappa di offset
         offset_map = {
-            "cog": bshift_cog_fit * 0.01,
+            "cog": bshift_cog * 0.01,
             "cog_fit": bshift_cog_fit * 0.01,
-            "poly": bshift_poly_fit * 0.01,
+            "poly": bshift_poly * 0.01,
             "poly_fit": bshift_poly_fit * 0.01
         }
 
         # Visualizza la mappa 'cog_fit'
+        plt.figure(figsize=(7, 4))
         plt.imshow(offset_map['cog_fit'], cmap='gray', aspect='auto')
         plt.colorbar()
         plt.title("Offset Map (cog_fit)")
