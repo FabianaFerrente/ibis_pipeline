@@ -5,57 +5,79 @@ from scipy.io import readsav
 from astropy.io import fits
 from ibis_core_m import ibis_core_m  # Importa la funzione dal tuo file
 import estrai_key as ek
+import os
 
+# ***************************************************************
+# Configurazione
+# ***************************************************************
+
+config_file = 'ibis_config_20150518.dat'
+filtro =  '6173'#'8542'  # o '6563'
 
 # Specifica le chiavi da cercare nel file per le variabili necessarie
 
 key_date = 'date'  # La chiave per estrarre la data
 key_time = 'time_obs'  # La chiave per estrarre l'orario delle osservazioni
-key_pol = 'pol'  # La chiave per estrarre il valore pol
+#key_pol = 'pol'  # La chiave per estrarre il valore pol
 key_dual = 'dual'  # La chiave per estrarre il valore dual
 key_single = 'single'  # La chiave per estrarre il valore single
 key_npoints = 'npoints'  # La chiave per estrarre il valore npoints
 
-date=ek.estrai_key('ibis_config_20150518.dat',key_date)
-time_obs=ek.estrai_key('ibis_config_20150518.dat',key_time)
-pol=ek.estrai_key('ibis_config_20150518.dat',key_pol)
-dual=ek.estrai_key('ibis_config_20150518.dat',key_dual)
-single=ek.estrai_key('ibis_config_20150518.dat',key_single)
-npoints=ek.estrai_key('ibis_config_20150518.dat',key_npoints) 
+date=ek.estrai_key(config_file,key_date)
+time_obs=ek.estrai_key(config_file,key_time)
+#pol=ek.estrai_key(config_file,key_pol)
+dual=ek.estrai_key(config_file,key_dual)
+single=ek.estrai_key(config_file,key_single)
+npoints=ek.estrai_key(config_file,key_npoints)
 
-pol = int(pol)  
 dual = int(dual)
 single = int(single)
 npoints = int(npoints)
 
-stokes = 6 
-filtro = '6173' # decide later where this variable should be taken
+# Imposto pol in base al filtro
+filtro = str(filtro)
 
-#check, da togliere dopo
-print("Data - Time - filtro:", date, time_obs, filtro)
-print("pol:",pol)
-print("dual:",dual)
-print("single:",single)
-print("points:",npoints)
+if filtro in ["6173", "8542"]:
+    pol = 1
+elif filtro == "6563":
+    pol = 0
+else:
+    raise ValueError(f"Filtro non riconosciuto: {filtro}")
+
+
+# Ora associo il numero di polarizzazioni
+if pol == 1:
+    Npol = 6
+    stokes = 6
+else:
+    Npol = 1
+    stokes = 1
+
+print(f"Filtro: {filtro} Å -> pol={pol}, Npol={Npol}")
+
+
+print(f"Data: {date} - Time: {time_obs} - Filtro: {filtro}")
+print(f"Pol: {pol}, Dual: {dual}, Single: {single}, Points: {npoints}, Stokes: {stokes}")
+
 
 # *****************************************************************
 # Caricamento e lettura dei file di flat,dark,configurazione e aps
 # *****************************************************************
 
-# Carica flat e dark e aps
-flat_data, dark_data = readsav('6173_flat.sav'), readsav('6173_dark.sav')
+suffix = "_0" if filtro == '6174' else ""
+flat_file = f"{filtro}_flat{suffix}.sav"
+dark_file = f"{filtro}_dark{suffix}.sav"
+aps_file = f"{filtro}_aps{suffix}.fits"
 
-"""
-with fits.open('6173_aps.fits') as hdul:
-    hdul.info()  # Mostra le estensioni del file
-    aps = hdul[0].data  # Legge i dati dell'estensione principale
-    aps_h = hdul[0].header  # Legge l'header
-    idx = np.where(aps > 1)
-"""
-with fits.open('6173_aps.fits') as hdul:
-    hdul.info()  # Mostra le estensioni del file
+
+# Carica flat e dark e aps
+for f in [flat_file, dark_file, aps_file]:
+    if not os.path.exists(f):
+        raise FileNotFoundError(f"File mancante: {f}")
+
+flat_data, dark_data = readsav(flat_file), readsav(dark_file)
+with fits.open(aps_file) as hdul:
     aps, aps_h = hdul[0].data, hdul[0].header
-idx = np.where(aps > 1)
 
 # I dati siano in variabili chiamate 'flat' e 'dark'
 f_file, d_file = flat_data['flat'], dark_data['dark']
@@ -67,16 +89,31 @@ info_str = flat_data['info_flat_nb']
 print("Forma di f_file:", f_file.shape)
 print("Forma di d_file:", d_file.shape)
 
-Ny, Nx, Npol = f_file.shape[1], f_file.shape[2], 6
 Nwave = int(f_file.shape[0] / Npol)
 
+Ny, Nx = f_file.shape[1], f_file.shape[2]
+
 print(Nwave)
+
+# Definizione wrange 
+
+#wrange = [1, Nwave - 1]
+
+if filtro == '6563':
+    wrange = [2, Nwave - 3]
+elif filtro == '8542':
+    wrange = [3, Nwave - 3]
+elif filtro == '6173':
+    wrange = [1, Nwave - 1]
+else:
+    raise ValueError("Filtro non riconosciuto. Usa 6563, 8542 o 6173.")
+
+print(f"Wave range: {wrange[0]} -> {wrange[1] - 1}")
 
 
 # ***************************************************************
 # Creare il "dark" medio, nessuna dipendenza dalla lunghezza d'onda
 # ***************************************************************
-# dark = np.mean(d_file, axis=1)
 dark = np.mean(d_file, axis=0)
 print("Dim dark:", dark.shape)
 
@@ -93,55 +130,74 @@ f_file = ftmp
 del ftmp  # Libera memoria
 
 # ***************************************************************
-# Modalità spettropolarimetrica
+# Creazione flat_tmp in base alla modalità
 # ***************************************************************
 if pol == 1:
-    print('------------------------------------------------------')
-    print('Blueshift calculation for spectropolarimetric case ...')
-    print('------------------------------------------------------')
-
-    # Verifica delle dimensioni
-    print("Forma di f_file:", f_file.shape)  # Deve essere (144, 1000, 1000)
-    print("Forma di dark:", dark.shape)  # Deve essere (1000, 1000)
-
-    #temp=np.zeros((Nx,Ny), dtype=np.float32)
-    temp = np.zeros((Ny,Nx), dtype=np.float32)
+    print("Modalità spettropolarimetrica")
     flat_tmp = np.zeros((Npol, Nwave, Ny, Nx), dtype=np.float32)
-    
-    # Ciclo corretto per calcolare il blueshift
-    
     for i in range(Npol):
         for n in range(Nwave):
-            temp = f_file[n*Npol+i, :, :] - dark[:, :]  # Corretto indexing
-            flat_tmp[i, n, :, :] = temp
+            flat_tmp[i, n, :, :] = f_file[n*Npol+i, :, :] - dark
+else:
+    print("Modalità spettroscopica")
+    flat_tmp = np.zeros((Nwave, Ny, Nx), dtype=np.float32)
+    for n in range(Nwave):
+        flat_tmp[n, :, :] = f_file[n, :, :] - dark
 
-    # Visualizzazione della parte dell'immagine
-    plt.figure(figsize=(7, 4))
-    plt.plot(flat_tmp[0,:,500, 250], marker='o', markersize=0.5, label="Posizione (250,500)")  #[250, 500, :, 0]
-    plt.plot(flat_tmp[0,:, 125, 250], marker='x', markersize=0.5, label="Posizione (250,125)")  #[250, 125, :, 0]
-    plt.plot(flat_tmp[0,:,900, 250], marker='s', markersize=0.5, label="Posizione (250,900)")  #[250, 900, :, 0]
-    plt.legend(fontsize=6)
-    plt.show(block=False)
-    plt.pause(3)
-    plt.close()
+# ***************************************************************
+# Visualizzazione profili (sia pol=0 che pol=1)
+# ***************************************************************
+plt.figure(figsize=(7, 4))
 
-     # Define the wavelength range
-    print('Nwave=',Nwave)
-    wrange = [1, Nwave]
-    print(wrange,wrange[0],wrange[1])
-# #***************************************************************
-# #Calcolo dell'offset con ibis_core_m
-# #***************************************************************
-    offset = ibis_core_m(flat_tmp[:, wrange[0]:wrange[1], :, :], wrange, aps, info_str=info_str, stokes=stokes)
+if pol == 1:
+    # Per pol=1, scegliamo ad esempio la prima polarizzazione
+    plt.plot(flat_tmp[0, :, 500, 250], marker='o', markersize=0.5, label="Posizione (250,500)")
+    plt.plot(flat_tmp[0, :, 125, 250], marker='x', markersize=0.5, label="Posizione (250,125)")
+    plt.plot(flat_tmp[0, :, 900, 250], marker='s', markersize=0.5, label="Posizione (250,900)")
+else:
+    # Per pol=0
+    plt.plot(flat_tmp[:, 500, 250], marker='o', markersize=0.5, label="Posizione (250,500)")
+    plt.plot(flat_tmp[:, 125, 250], marker='x', markersize=0.5, label="Posizione (250,125)")
+    plt.plot(flat_tmp[:, 900, 250], marker='s', markersize=0.5, label="Posizione (250,900)")
+
+plt.legend(fontsize=6)
+plt.show(block=False)
+plt.pause(3)
+plt.close()
+
+
+# ***************************************************************
+# Calcolo offset
+# ***************************************************************
+if __name__ == "__main__":
+    import multiprocessing
+    multiprocessing.freeze_support()
+
+    print("Inizio calcolo offset...")
+
+    if pol == 0:
+        # spettroscopico: flat_tmp ha shape (Nwave, Ny, Nx)
+        # aggiungo un asse pol fittizio -> (1, Nwave, Ny, Nx)
+        data_slice = flat_tmp[wrange[0]:wrange[1], :, :]
+        data_slice = data_slice[np.newaxis, :, :, :]
+    else:
+        # spettropolarimetrico: flat_tmp ha già shape (Npol, Nwave, Ny, Nx)
+        data_slice = flat_tmp[:, wrange[0]:wrange[1], :, :]
+
+    # (opzionale) stampa di controllo
+    print("data_slice shape =", data_slice.shape)  # atteso: (Npol, Nwave_sel, Ny, Nx)
+
+    offset = ibis_core_m(data_slice, wrange, aps, info_str=info_str, stokes=stokes)
 
     print("Offset calcolato correttamente.")
 
-# Salva più array in un file .npz
-    np.savez('offsets.npz', cog=offset['cog'], cog_fit=offset['cog_fit'], poly=offset['poly'], poly_fit=offset['poly_fit'])
-    print("Offset salvato in 'offset.fits'.")
+    # Salvataggio in file .npz con nome in base al filtro
+    out_file = f"offsets_{filtro}_new.npz"
+    np.savez(out_file,
+             cog=offset['cog'],
+             cog_fit=offset['cog_fit'],
+             poly=offset['poly'],
+             poly_fit=offset['poly_fit'])
 
-
-# ***************************************************************
-# Fine codice
-# ***************************************************************
-print("Codice eseguito correttamente.")
+    print(f"Offset salvato in '{out_file}'.")
+    print("Codice eseguito correttamente.")

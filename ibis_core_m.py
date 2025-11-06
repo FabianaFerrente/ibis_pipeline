@@ -12,20 +12,19 @@ import os
 import estrai_key as ek
 from ibis_chan import ibis_chan
 
-key_pol = 'pol'  # La chiave per estrarre il valore pol
+#key_pol = 'pol'  # La chiave per estrarre il valore pol
 key_dual = 'dual'  # La chiave per estrarre il valore dual
 key_single = 'single'  # La chiave per estrarre il valore single
 key_npoints = 'npoints'  # La chiave per estrarre il valore npoints
 
-pol=ek.estrai_key('ibis_config_20150518.dat',key_pol)
+#pol=ek.estrai_key('ibis_config_20150518.dat',key_pol)
 dual=ek.estrai_key('ibis_config_20150518.dat',key_dual)
 single=ek.estrai_key('ibis_config_20150518.dat',key_single)
 npoints=ek.estrai_key('ibis_config_20150518.dat',key_npoints)
 
-pol = int(pol)  
 dual = int(dual)
 single = int(single)
-npoints = int(points)
+npoints = int(npoints)
 
 def surface_fit(bshift_cog, bshift_poly, Ny, Sep_LR):
     xmatrix, ymatrix = np.tile(np.arange(Sep_LR), (Ny, 1)), np.tile(np.arange(Ny).reshape(Ny, 1), (1, Sep_LR))
@@ -58,7 +57,7 @@ def surface_fit(bshift_cog, bshift_poly, Ny, Sep_LR):
 
 
 
-def ibis_core_m(flat, wrange, aps, info_str, stokes=1):
+def ibis_core_m(flat, wrange, aps, info_str, stokes=None):
 
 
     """
@@ -89,13 +88,28 @@ def ibis_core_m(flat, wrange, aps, info_str, stokes=1):
 
     Returns:
     - offset_map: Dictionary with computed offset maps
-    """
 
+    """
+    
+    if stokes == 6:
+        pol = 1   # polarimetria
+    elif stokes == 1:
+        pol = 0   # spettroscopia
+    else:
+        raise ValueError(f"error")
+    
     # ********************
     # 1. Get dimensions
     # ********************
     print("Shape of flat:", flat.shape)
-    Nwave, Ny, Nx = flat.shape[1:4]
+    
+    if flat.ndim == 4:
+        _, Nwave, Ny, Nx = flat.shape
+    elif flat.ndim == 3:
+        Nwave, Ny, Nx = flat.shape
+    else:
+        raise ValueError("Unexpected shape for input 'flat'")
+
     Npol = stokes if stokes is not None else 1
     Sep_LR = Nx//2  # separation index between the channels, start index of the second channel
     print("Nwave:", Nwave)
@@ -112,20 +126,54 @@ def ibis_core_m(flat, wrange, aps, info_str, stokes=1):
     # ********************
     # 3. Spectropolarimetric Mode
     # ********************
+    
+
     if pol is not None and pol == 1:
         print("Spectropolarimetric mode activated.")
-   
-        wscale1,wscale_equi = ibis_equidistant(info_str, Nwave, wrange)
+        wscale1, wscale_equi = ibis_equidistant(info_str, Nwave, wrange)
+
+    elif pol == 0:
+        # Estrai l'array interno da info_str.grid
+        if isinstance(info_str.grid, (list, np.ndarray)) and len(info_str.grid) == 1:
+            grid_array = info_str.grid[0]
+        else:
+            grid_array = info_str.grid
+        print("Spectroscopic mode activated.")
+        # unique_elements + sort + slicing
+        wscale = np.unique(grid_array)
+        wscale = np.sort(wscale)
+        wscale1 = wscale[wrange[0]:wrange[1]]
+
+        # Calcolo di nwscale
+        nwscale = int(round((np.max(wscale1) - np.min(wscale1)) / 0.01))
+
+        # Genera array equispaziato
+        wscale_equi = np.linspace(np.min(wscale1), np.max(wscale1), nwscale)
+
+    else:
+        raise ValueError("Unexpected value for 'pol'. Must be 0 (spectroscopic) or 1 (spectropolarimetric).")
+
+
     
 
     # ********************
     # 4. Dual-Beam Mode
     # ********************
     if dual is not None and dual == 1:
-        
         print("Dual-beam mode activated.")
-        flat_l, apsl = flat[:, :, :, :Sep_LR], aps[:, :Sep_LR]
-        flat_r, apsr = flat[:, :, :, Sep_LR:], aps[:, Sep_LR:]
+        
+        if flat.ndim == 4:
+        # dati spettropolarimetrici
+        
+            flat_l, apsl = flat[:, :, :, :Sep_LR], aps[:, :Sep_LR]
+            flat_r, apsr = flat[:, :, :, Sep_LR:], aps[:, Sep_LR:]
+        elif flat.ndim == 3:
+            # dati spettrali
+            flat_l, apsl = flat[ :, :, :Sep_LR], aps[:, :Sep_LR]
+            flat_r, apsr = flat[ :, :, Sep_LR:], aps[:, Sep_LR:]
+        
+        else:
+            raise ValueError(f"Unexpected flat ndim: {flat.ndim}")
 
         # Defining arrays to store final results
         bshift_cog, bshift_poly = np.zeros((Ny, Nx), dtype=float), np.zeros((Ny, Nx), dtype=float)
@@ -134,25 +182,6 @@ def ibis_core_m(flat, wrange, aps, info_str, stokes=1):
         # Defining arrays for storing the surface fits
         bshift_cog_fit_left, bshift_poly_fit_left = np.zeros((Ny, Sep_LR), dtype=float), np.zeros((Ny, Sep_LR), dtype=float)
         bshift_cog_fit_right, bshift_poly_fit_right = np.zeros((Ny, Sep_LR), dtype=float), np.zeros((Ny, Sep_LR), dtype=float)
-        
-        """
-        flat_l=flat[:, :, :, :Nx//2]
-        apsl = aps[:, 0:Nx//2]
-
-        bshift_cog1,bshift_poly1=ibis_chan(apsl,flat_l,wscale1,wscale_equi,Npol,Nwave,Nx,Ny,npoints)
-        # moved down
-
-        bshift_cog_l = bshift_cog1
-        bshift_poly_l = bshift_poly1
-
-        flat_r=flat[:, :, :, Nx//2:]
-        apsr = aps[:, Nx//2:Nx]
-
-        bshift_cog1,bshift_poly1=ibis_chan(apsr,flat_r,wscale1,wscale_equi,Npol,Nwave,Nx,Ny,npoints)
-
-        bshift_cog_r = bshift_cog1
-        bshift_poly_r = bshift_poly1    
-        """
 
         bshift_cog_l, bshift_poly_l = ibis_chan(apsl, flat_l, wscale1, wscale_equi, Npol, Nwave, Nx, Ny, npoints)
         bshift_cog_r, bshift_poly_r = ibis_chan(apsr, flat_r, wscale1, wscale_equi, Npol, Nwave, Nx, Ny, npoints)
@@ -191,93 +220,6 @@ def ibis_core_m(flat, wrange, aps, info_str, stokes=1):
         # 6. Surface Fit
         # ********************
 
-        """
-        bshift_cog_fit = np.zeros((Ny, Nx))
-        bshift_poly_fit = np.zeros((Ny, Nx))
-
-        bshift_cog_fit_left = np.zeros((Ny, Nx//2))
-        bshift_poly_fit_left = np.zeros((Ny, Nx//2))
-        bshift_cog_fit_right = np.zeros((Ny, Nx//2))
-        bshift_poly_fit_right = np.zeros((Ny, Nx//2))
-        # moved both up near the start of the if condition.
-
-        # Creazione di matrici x e y
-        # Coordinate come in IDL con rebin
-        xmatrix = np.tile(np.arange(Nx//2), (Ny, 1))
-        ymatrix = np.tile(np.arange(Ny).reshape(Ny, 1), (1, Nx//2))
-        
-        zmatrix_cog = bshift_cog_l
-        zmatrix_poly = bshift_poly_l
-        
-        # Maschera dei punti validi
-        mask = zmatrix_cog != zmatrix_cog[10, 10]
-        x_valid = xmatrix[mask].flatten()
-        y_valid = ymatrix[mask].flatten()
-        z_cog_valid = zmatrix_cog[mask].flatten()
-        z_poly_valid = zmatrix_poly[mask].flatten()
-        
-        # Regressione polinomiale (grado 2)
-        X = np.vstack((x_valid, y_valid)).T
-        poly = PolynomialFeatures(degree=2)
-        X_poly = poly.fit_transform(X)
-
-        # Fit per zmatrix_cog
-        model_cog = LinearRegression()
-        model_cog.fit(X_poly, z_cog_valid)
-        fit_cog = model_cog.predict(X_poly)
-
-        # Fit per zmatrix_poly
-        model_poly = LinearRegression()
-        model_poly.fit(X_poly, z_poly_valid)
-        fit_poly = model_poly.predict(X_poly)
-        
-        # Matrici risultato (inizializzate con NaN)
-        bshift_cog_fit_left = np.full_like(zmatrix_cog, np.nan, dtype=np.float64)
-        bshift_poly_fit_left = np.full_like(zmatrix_poly, np.nan, dtype=np.float64)
-
-        # Inserimento solo nei punti originali (come in IDL)
-        bshift_cog_fit_left[mask] = fit_cog
-        bshift_poly_fit_left[mask] = fit_poly
-    
-        
-        # Fit the right region
-        xmatrix = np.tile(np.arange(Nx//2, Nx), (Ny, 1))
-        ymatrix = np.tile(np.arange(Ny).reshape(Ny, 1), (1, Nx//2))
-        
-        # Matrici da interpolare
-        zmatrix_cog = bshift_cog_r
-        zmatrix_poly = bshift_poly_r
-
-        # Maschera dei valori validi
-        mask = zmatrix_cog != zmatrix_cog[10, 10]
-        x_valid = xmatrix[mask].flatten()
-        y_valid = ymatrix[mask].flatten()
-        z_cog_valid = zmatrix_cog[mask].flatten()
-        z_poly_valid = zmatrix_poly[mask].flatten()
-
-        # Fit polinomiale di secondo grado
-        X = np.vstack((x_valid, y_valid)).T
-        poly = PolynomialFeatures(degree=2)
-        X_poly = poly.fit_transform(X)
-
-        # Fit su zmatrix_cog
-        model_cog = LinearRegression()
-        model_cog.fit(X_poly, z_cog_valid)
-        fit_cog = model_cog.predict(X_poly)
-
-        # Fit su zmatrix_poly
-        model_poly = LinearRegression()
-        model_poly.fit(X_poly, z_poly_valid)
-        fit_poly = model_poly.predict(X_poly)
-
-        # Matrici risultato inizializzate con NaN
-        bshift_cog_fit_right = np.full_like(zmatrix_cog, np.nan, dtype=np.float64)
-        bshift_poly_fit_right = np.full_like(zmatrix_poly, np.nan, dtype=np.float64)
-
-        # Inserimento dei valori fitted nei punti originali
-        bshift_cog_fit_right[mask] = fit_cog
-        bshift_poly_fit_right[mask] = fit_poly
-        """
 
         # Assemblaggio finale
         """
