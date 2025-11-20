@@ -1,0 +1,82 @@
+λ=6173 Å: 288 frame validi, 0 scartati
+
+File: /Users/giovanna/IBIS/ibis_pipeline_python/ibis_pipeline_definitive/data/output/6173_BB_FlatAvg_240frames_3.0sigma_new.fits
+Struttura del FITS (HDU list):
+Filename: /Users/giovanna/IBIS/ibis_pipeline_python/ibis_pipeline_definitive/data/output/6173_BB_FlatAvg_240frames_3.0sigma_new.fits
+No.    Name      Ver    Type      Cards   Dimensions   Format
+  0  DARK          1 PrimaryHDU      55   ()      
+  1  Image000      1 ImageHDU        15   (1000, 1000)   float32   
+
+=== HEADER PRIMARIO ===
+SIMPLE  =                    T / conforms to FITS standard                      
+BITPIX  =                    8 / array data type                                
+NAXIS   =                    0 / number of array dimensions                     
+EXTEND  =                    T                                                  
+NIMAGES =                  366 / EXPECTED NUMBER OF IMAGES PER FITS FILE        
+EXPTIME =                 0.07 / EXPOSURE TIME IN SECONDS                       
+DATE-BEG= '2015-05-18T17:01:13.294' / STARTING DATE AND TIME IN U.T.            
+DATE-END= '2015-05-18T17:01:13.364' / ENDING   DATE AND TIME IN U.T.            
+FILTER  =                    6 / COMMANDED POSITION OF THE FILTER WHEEL         
+WAVELNTH=            6302.2402 / THE (APPROXIMATE ABS) WAVELENGTH OF THE OBSERVA
+REL_WAVE=              -0.5737 / WAVELENGTH RELATIVE TO IBIS FILTER CENTER      
+WAVEUNIT=                  -10 / WAVELENGTH UNITS USED IN THE OBSERVATION       
+FP1_VOLT=               -711.0 / VOLTAGE SETTING TO CS100 CONTROLLER OF FP1     
+FP2_VOLT=                -43.0 / VOLTAGE SETTING TO CS100 CONTROLLER OF FP2     
+LCVR1_RE=                360.0 / COMMANDED RETARDANCE TO LCVR #1                
+LCVR2_RE=                270.0 / COMMANDED RETARDANCE TO LCVR #2                
+LCVR1_V =                2.088 / VOLTAGE SETTING TO LCVR #1                     
+LCVR2_V =                2.505 / VOLTAGE SETTING TO LCVR #2                     
+STOKES  = 'I+V     '           / STOKES PARAMETER                               
+BUF_INFO=                    0 / Number of CamImg in ring buffer                
+FRAMENUM=                  199 / Image Number in this series (ZERO based)       
+DST_TIME= '2015-05-18T17:01:06.448' / When DST info was last updated (UTC)      
+DST_AZ  =            108.67485 / DST turret azimuth (degrees)                   
+DST_EL  =            60.401601 / DST turret elevation (degrees)                 
+DST_TBL =            59.562837 / DST table position (degrees)                   
+DST_GDRN=            13.281152 / DST guider angle (degrees)                     
+DST_XGDR=            23.521429 / DST guider X-axis position (arcsec)            
+DST_YGDR=            11.774972 / DST guider Y-axis position (arcsec)            
+DST_SLAT=          -0.75962864 / Stonyhurst Heliographic solar lat. (deg)       
+DST_SLNG=           0.36407667 / Stonyhurst Heliographic solar long. (deg)      
+DST_HPA =            346.68832 / Heliocentric position angle (degrees)          
+DST_GPA =            326.68046 / Geocentric position angle (degrees)            
+DST_RV  =          0.027722653 / Heliocentric radius vector                     
+DST_PEE =           -20.007869 / Solar P angle (degrees)                        
+DST_BEE0=           -2.2984665 / Solar B0 angle (degrees)                       
+DST_ELL0=            36.458744 / Solar L0 angle (degrees)                       
+DST_SDIM=            1897.6637 / Solar diameter (arcsec)                        
+DST_LLVL=            5.2246094 / DST guider light level                         
+DST_SEE =           0.66894531 / Seykora scintillation monitor value (arcsec)   
+DST_SAZ =            108.68019 / Solar azimuth (degrees)                        
+DST_SEL =            60.395446 / Solar elevation (degrees)                      
+PT4_TIME= '2015-05-18T13:48:27.402' / When PT4 info was last updated (UTC)      
+PT4_PSTG= 'OUT     '           / Port 4 cal unit polarizer stage position       
+PT4_POL =                  0.0 / Port 4 cal unit polarizer position (degrees)   
+PT4_RSTG= 'OUT     '           / Port 4 cal unit retarder stage position        
+PT4_RET =                0.044 / Port 4 cal unit retarder position (degrees)    
+PT4_MIR = 'OUT     '           / Port 4 lamp mirror position                    
+PT4_FS  = 'USER1   '           / Port 4 field stop position                     
+SEQ_CTR =                  199 / IMAGE NUMBER WITHIN EACH SEQ  (ZERO based)     
+EXTNAME = 'DARK    '                                                            
+NFRAMES =                  144                                                  
+FILENAME= '6173_BB_FlatAvg_240frames_3.0sigma_new.fits' / Output FITS file name 
+NINPUTS =                    2 / Number of input FITS files used                
+INPUT_N1= '6173_20150518_170031_BB_FF_s000_MEF.fits' / Parent FITS file #1      
+INPUT_N2= '6173_20150518_170031_BB_FF_s001_MEF.fits' / Parent FITS file #2      
+
+=== HEADER IMAGE HDU 1 ===
+XTENSION= 'IMAGE   '           / Image extension                                
+BITPIX  =                  -32 / array data type                                
+NAXIS   =                    2 / number of array dimensions                     
+NAXIS1  =                 1000                                                  
+NAXIS2  =                 1000                                                  
+PCOUNT  =                    0 / number of parameters                           
+GCOUNT  =                    1 / number of groups                               
+EXTNAME = 'Image000'           / Frame index                                    
+FRAMEID =                    0                                                  
+NINPUTS =                    2 / Number of parent FITS files                    
+PARENT  = '6173_20150518_170031_BB_FF_s000_MEF.fits' / Template source FITS file
+EXTNUM  =                    1 / Extension index                                
+FRAMIDX =                    0 / Frame number in sequence                       
+FLUCTUAT=      1527.0849609375 / Fluctuation of frame data                      
+MEAN_O  =   1278.9405517578125 / Mean of output frame                           
